@@ -1,0 +1,84 @@
+﻿@model List<PourOverCafeSystem_Admin.Database.Reservation>
+@{
+    Layout = "~/Views/Shared/_ReportLayout.cshtml";
+    ViewData["Title"] = "Reservation Summary";
+    string searchQuery = ViewBag.SearchQuery as string;
+}
+
+<div class="container my-4">
+    <div class="text-center mb-4">
+        <img src="/images/Admin Header.png" alt="Reports Header" class="img-fluid" style="max-height: 300px;">
+    </div>
+
+    <div class="text-center mb-3">
+        <a href="/Dashboard/Index" class="btn btn-secondary fw-bold" style="border-radius: 10px; padding: 6px 14px;">
+            ← Back to Dashboard
+        </a>
+    </div>
+
+    <div class="mb-5"></div>
+
+    <!-- Filter & Search -->
+    <form asp-action="Summary" method="get" class="row g-2 align-items-end justify-content-center mb-4">
+        <div class="col-auto">
+            <label for="from" class="form-label fw-bold">From:</label>
+            <input type="date" name="from" class="form-control" value="@ViewBag.From?.ToString("yyyy-MM-dd")" />
+        </div>
+        <div class="col-auto">
+            <label for="to" class="form-label fw-bold">To:</label>
+            <input type="date" name="to" class="form-control" value="@ViewBag.To?.ToString("yyyy-MM-dd")" />
+        </div>
+        <div class="col-auto">
+            <label for="search" class="form-label fw-bold">Search Guest:</label>
+            <input type="text" name="search" class="form-control" value="@searchQuery" placeholder="e.g. Juan Dela Cruz" />
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-dark">Apply</button>
+        </div>
+    </form>
+
+    <div class="mb-5"></div>
+
+    <!-- Summary Count -->
+    <div class="row text-center mb-4">
+        <div class="col text-success fw-bold">Completed: @Model.Count(r => r.ReservationStatus == "Completed")</div>
+        <div class="col text-danger fw-bold">Expired: @Model.Count(r => r.ReservationStatus == "Expired")</div>
+        <div class="col text-secondary fw-bold">Cancelled: @Model.Count(r => r.ReservationStatus == "Cancelled")</div>
+    </div>
+
+    <div class="mb-5"></div>
+
+    <!-- Grouped by Status -->
+    @{
+        var statusGroups = Model
+        .Where(r => string.IsNullOrEmpty(searchQuery) || (r.GuestName?.ToLower().Contains(searchQuery.ToLower()) ?? false))
+        .GroupBy(r => r.ReservationStatus)
+        .OrderBy(g => g.Key);
+    }
+
+    @foreach (var group in statusGroups)
+    {
+        <h4 class="fw-bold mb-3 text-center">@group.Key</h4>
+        <div class="row mb-4">
+            @foreach (var res in group)
+            {
+                var cardClass = res.ReservationStatus switch
+                {
+                    "Completed" => "border-success bg-light",
+                    "Expired" => "border-danger bg-light",
+                    "Cancelled" => "border-secondary bg-light",
+                    _ => "bg-white"
+                };
+
+                <div class="col-md-4 mb-4">
+                    <div class="card @cardClass border-2 p-3 shadow rounded animate-fade-in">
+                        <h5 class="fw-bold">@res.GuestName</h5>
+                        <p><strong>Table:</strong> @res.Table?.TableName</p>
+                        <p><strong>Status:</strong> @res.ReservationStatus</p>
+                        <p><strong>Date:</strong> @(res.ReservationDateTime?.ToString("f") ?? "No Date")</p>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>

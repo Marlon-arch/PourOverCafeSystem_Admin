@@ -1,0 +1,697 @@
+﻿@model PourOverCafeSystem_Admin.ViewModels.DashboardViewModel
+
+@{
+    ViewData["Title"] = "Admin Dashboard";
+    ViewData["HideHeader"] = true;
+}
+
+<div class="dashboard-wrapper d-flex">
+    <aside class="dashboard-sidebar p-4">
+        <div class="text-center mb-4">
+            <img src="/images/Navbar Logo.png" alt="Pour Over Admin" class="img-fluid" style="max-width: 180px; height: auto;" />
+        </div>
+
+        <!-- Cafe Status Switch -->
+        <div class="cafe-status-toggle mb-4 text-center">
+            <label class="form-check-label fw-bold d-block mb-2" id="cafeStatusLabel" for="cafeClosedSwitch">
+                @(Model.CafeIsClosed ? "Cafe is Closed" : "Cafe is Open")
+            </label>
+            <div class="form-check form-switch d-flex justify-content-center">
+                <input class="form-check-input form-toggle" type="checkbox" id="cafeClosedSwitch"
+                       onchange="toggleCafeStatus(this.checked)"
+                @(Model.CafeIsClosed ? "checked" : "") />
+            </div>
+        </div>
+
+        <ul class="nav flex-column">
+            <li class="nav-item mb-2">
+                <a class="nav-link sidebar-link" asp-controller="Dashboard" asp-action="Summary">📊 Summary Reports</a>
+            </li>
+            <li class="nav-item mb-2">
+                <a class="nav-link sidebar-link" href="#approvals">📝 Approval</a>
+            </li>
+            <li class="nav-item mb-2">
+                <a class="nav-link sidebar-link" href="#waitlist-active">⏳ Active Waitlist</a>
+            </li>
+            <li class="nav-item mb-2">
+                <a class="nav-link sidebar-link" href="#waitlist-inactive">🛑 Inactive Waitlist</a>
+            </li>
+            <li class="nav-item mb-2">
+                <a class="nav-link sidebar-link" href="#tables">📋 Management</a>
+            </li>
+        </ul>
+
+        <div class="mt-auto pt-4 text-center logout-section">
+            <form asp-controller="Login" asp-action="Logout" method="get">
+                <button type="submit" class="btn btn-disapprove w-100">Logout</button>
+            </form>
+        </div>
+    </aside>
+
+    <main class="dashboard-main p-4 flex-fill">
+        <div class="text-center mb-4">
+            <img src="/images/Admin Header.png" alt="Admin Dashboard" class="img-fluid" style="max-width: 850px; height: auto;" />
+        </div>
+
+        <!-- Pending Approvals Section -->
+        <section id="approvals" class="dashboard-section mb-5">
+            <h4 class="section-header">📝 Payment Approvals</h4>
+            <div class="row">
+                @foreach (var payment in Model.Approvals)
+                {
+                    <div class="col-md-6">
+                        <div class="card shadow border-0 rounded-lg mb-4 bg-white animate-fade-in p-3">
+                            <div class="d-flex justify-content-between align-items-start flex-wrap">
+                                <div style="flex: 1 1 60%">
+                                    <h5 class="fw-bold">Reservation #@payment.Reservation?.ReservationId</h5>
+                                    <p><strong>Guest:</strong> @payment.Reservation?.GuestName</p>
+                                    <p><strong>GCash:</strong> @payment.GcashNumber</p>
+                                    <p><strong>Receipt:</strong> @payment.ReceiptNumber</p>
+                                    <p><strong>Order:</strong> @payment.Reservation?.OrderText</p>
+                                    <p><strong>Table:</strong> @payment.Reservation?.Table?.TableName</p>
+                                </div>
+                                <div class="ms-3" style="flex: 0 0 120px">
+                                    <a href="@payment.ScreenshotPath" target="_blank">
+                                        <img src="@payment.ScreenshotPath" class="img-fluid rounded shadow-sm screenshot-img" />
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="text-center mt-3">
+                                <button class="btn btn-approve me-2" onclick="showModal('approveModal-@payment.PaymentId')">Approve</button>
+                                <button class="btn btn-disapprove" onclick="showModal('disapproveModal-@payment.PaymentId')">Disapprove</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Modals -->
+                    <div class="modal" id="approveModal-@payment.PaymentId">
+                        <div class="modal-backdrop"></div>
+                        <div class="modal-content">
+                            <h4 class="mb-3">Confirm Approval</h4>
+                            <form asp-action="Approve" asp-controller="Approval" method="post">
+                                <input type="hidden" name="id" value="@payment.PaymentId" />
+                                <div class="d-flex justify-content-between">
+                                    <button type="submit" class="btn btn-approve">Approve</button>
+                                    <button type="button" class="btn btn-disapprove" onclick="hideModal('approveModal-@payment.PaymentId')">Cancel</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div class="modal" id="disapproveModal-@payment.PaymentId">
+                        <div class="modal-backdrop"></div>
+                        <div class="modal-content">
+                            <h4 class="mb-3">Disapprove Reservation</h4>
+                            <form asp-action="Disapprove" asp-controller="Approval" method="post">
+                                <input type="hidden" name="id" value="@payment.PaymentId" />
+                                <textarea name="remarks" class="form-control" rows="3" placeholder="Reason for disapproval..." required></textarea>
+                                <div class="d-flex justify-content-between mt-3">
+                                    <button type="submit" class="btn btn-disapprove">Disapprove</button>
+                                    <button type="button" class="btn btn-approve" onclick="hideModal('disapproveModal-@payment.PaymentId')">Cancel</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                }
+            </div>
+        </section>
+
+        <!-- Waitlist Active Section -->
+        <section id="waitlist-active" class="mb-5">
+            <h4 class="section-header">⏳ Active Waitlist</h4>
+            <div class="row">
+                @foreach (var timer in Model.WaitlistActive)
+                {
+                    var remaining = timer.EndTime - DateTime.Now;
+                    var total = timer.EndTime - timer.StartTime;
+                    var percent = (remaining?.TotalSeconds / total?.TotalSeconds ?? 0) * 100;
+
+                    <div class="col-md-4 mb-4">
+                        <div class="card p-3 shadow rounded-lg bg-light animate-fade-in">
+                            <p><strong>Reservation ID:</strong> @timer.Reservation?.ReservationId</p>
+                            <p><strong>Guest:</strong> @timer.Reservation?.GuestName</p>
+                            <p><strong>Table:</strong> @timer.Reservation?.Table?.TableName</p>
+                            <p><strong>Order:</strong> @timer.Reservation?.OrderText</p>
+                            <p>
+                                <strong>Time Left:</strong>
+                                <span id="timer-@timer.TimerId" data-end="@timer.EndTime?.ToString("o")">00:00</span>
+                            </p>
+
+                            <div class="d-flex justify-content-between mt-3">
+                                <button class="btn btn-approve" onclick="showModal('arrivedConfirm-@timer.TimerId')">Arrived</button>
+                                <button class="btn btn-disapprove" onclick="showModal('cancelConfirm-@timer.TimerId')">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ARRIVED Modal -->
+                    <div class="modal" id="arrivedConfirm-@timer.TimerId">
+                        <div class="modal-backdrop"></div>
+                        <div class="modal-content">
+                            <h4 class="mb-3">Confirm Arrival</h4>
+                            <p>Are you sure the customer has arrived?</p>
+                            <form asp-action="MarkArrived" asp-controller="Dashboard" method="post">
+                                <input type="hidden" name="timerId" value="@timer.TimerId" />
+                                <div class="d-flex justify-content-between mt-3">
+                                    <button type="submit" class="btn btn-approve">Yes</button>
+                                    <button type="button" class="btn btn-disapprove" onclick="hideModal('arrivedConfirm-@timer.TimerId')">Cancel</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- CANCEL Modal -->
+                    <div class="modal" id="cancelConfirm-@timer.TimerId">
+                        <div class="modal-backdrop"></div>
+                        <div class="modal-content">
+                            <h4 class="mb-3">Cancel Reservation</h4>
+                            <p>This will cancel the reservation. Proceed?</p>
+                            <form asp-action="CancelReservation" asp-controller="Dashboard" method="post">
+                                <input type="hidden" name="timerId" value="@timer.TimerId" />
+                                <div class="d-flex justify-content-between mt-3">
+                                    <button type="submit" class="btn btn-disapprove">Yes</button>
+                                    <button type="button" class="btn btn-approve" onclick="hideModal('cancelConfirm-@timer.TimerId')">No</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                }
+            </div>
+        </section>
+
+        <!-- Waitlist Inactive Section -->
+        <section id="waitlist-inactive" class="mb-5">
+            <h4 class="section-header">
+                🛑 Inactive Waitlist
+                <button class="btn btn-sm btn-outline-danger float-end" onclick="showModal('removeAllModal')">Remove All</button>
+            </h4>
+            <div class="row" id="inactiveCards">
+                @foreach (var timer in Model.WaitlistInactive)
+                {
+                    var statusText = timer.Reservation?.ReservationStatus;
+                    var statusColor = statusText == "Completed" ? "success" :
+                    statusText == "Expired" ? "danger" : "secondary";
+                    var badge = $"<span class='badge bg-{statusColor}'>{statusText}</span>";
+
+                    <div class="col-md-4 mb-4 inactive-card" data-id="@timer.TimerId">
+                        <div class="card expired-card p-3 shadow rounded animate-fade-in">
+                            <div class="expired-cross" onclick="confirmRemoveCard(@timer.TimerId)">✖</div>
+                            <p><strong>Reservation ID:</strong> @timer.Reservation?.ReservationId</p>
+                            <p><strong>Guest:</strong> @timer.Reservation?.GuestName</p>
+                            <p><strong>Table:</strong> @timer.Reservation?.Table?.TableName</p>
+                            <p><strong>Status:</strong> @Html.Raw(badge)</p>
+                            <p><strong>Start:</strong> @(timer.StartTime?.ToString("g") ?? "-")</p>
+                            <p><strong>End:</strong> @(timer.EndTime?.ToString("g") ?? "-")</p>
+                        </div>
+                    </div>
+                }
+            </div>
+        </section>
+
+        <!-- Remove All Popup -->
+        <div class="modal" id="removeAllModal">
+            <div class="modal-backdrop"></div>
+            <div class="modal-content">
+                <h4 class="mb-3">Remove All Inactive Cards</h4>
+                <p class="text-muted">This will hide all cards below but you can still access them in the Summary Reports.</p>
+                <div class="d-flex justify-content-between mt-3">
+                    <button class="btn btn-disapprove" onclick="performRemoveAll()">Remove All</button>
+                    <button class="btn btn-approve" onclick="hideModal('removeAllModal')">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Remove One Popup Modal -->
+        <div class="modal" id="confirmRemoveModal">
+            <div class="modal-backdrop"></div>
+            <div class="modal-content">
+                <h4 class="mb-3">Removing Inactive Card</h4>
+                <p class="text-muted">Are you sure you want to remove this specific card?</p>
+                <div class="d-flex justify-content-between mt-3">
+                    <button class="btn btn-disapprove" onclick="performRemoveCard()">Remove</button>
+                    <button class="btn btn-approve" onclick="hideModal('confirmRemoveModal')">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table Monitor Section -->
+        <section id="tables" class="mb-5">
+            <h4 class="section-header">🪑 Table Layout Reference</h4>
+            <div class="text-center mb-4">
+                <img src="/images/PourOverFloorPlan.png" alt="Cafe Floorplan Layout" class="img-fluid rounded shadow" style="max-height: 600px;">
+            </div>
+
+            <h4 class="section-header">📋 Table Management</h4>
+            <div class="row">
+                @foreach (var table in Model.Tables)
+                {
+                    <div class="col-md-2 col-6 mb-3">
+                        <div id="table-box-@table.TableId" class="table-box p-3 text-center rounded shadow-sm animate-fade-in" style="background: @(table.Status == "Available" ? "linear-gradient(135deg, #d9f7dc, #b5eabf)" : table.Status == "Reserved" ? "linear-gradient(135deg, #fbdcdc, #f6a4a4)" : "linear-gradient(135deg, #fff2d2, #e1c478)")">
+                            <h5 class="fw-bold">@table.TableName</h5>
+                            <select class="form-select mt-2" onchange="updateTableStatus(@table.TableId, this.value)">
+                                <option selected="@(table.Status == "Available")" value="Available">Available</option>
+                                <option selected="@(table.Status == "Reserved")" value="Reserved">Reserved</option>
+                                <option selected="@(table.Status == "Unavailable")" value="Unavailable">Unavailable</option>
+                            </select>
+                        </div>
+                    </div>
+                }
+            </div>
+        </section>
+        <div class="text-center mb-4">
+            <img src="/images/Tagline.png" alt="Tagline Footer" class="img-fluid" style="max-width: 800px; height: auto;" />
+        </div>
+    </main>
+</div>
+
+<script>
+    let pendingRemoveId = null;
+
+    function confirmRemoveCard(timerId) {
+        pendingRemoveId = timerId;
+        showModal('confirmRemoveModal');
+    }
+
+    function performRemoveCard() {
+        if (pendingRemoveId !== null) {
+            const card = document.querySelector(`[data-id="${pendingRemoveId}"]`);
+            if (card) {
+                card.style.display = "none";
+                localStorage.setItem("removedCard_" + pendingRemoveId, "true");
+            }
+        }
+        hideModal('confirmRemoveModal');
+    }
+
+    function performRemoveAll() {
+        const cards = document.querySelectorAll(".inactive-card");
+        cards.forEach(card => {
+            const id = card.getAttribute("data-id");
+            if (id) {
+                card.style.display = "none";
+                localStorage.setItem("removedCard_" + id, "true");
+            }
+        });
+        hideModal('removeAllModal');
+    }
+
+    function showModal(id) {
+        document.getElementById(id).style.display = "block";
+    }
+
+    function hideModal(id) {
+        document.getElementById(id).style.display = "none";
+    }
+
+    window.onload = function () {
+        const cards = document.querySelectorAll(".inactive-card");
+        cards.forEach(card => {
+            const id = card.getAttribute("data-id");
+            if (localStorage.getItem("removedCard_" + id) === "true") {
+                card.style.display = "none";
+            }
+        });
+    };
+
+    function updateTableStatus(tableId, newStatus) {
+        fetch(`/Dashboard/UpdateTableStatus?tableId=${tableId}&status=${newStatus}`)
+            .then(res => {
+                if (res.ok) {
+                    const container = document.getElementById(`table-box-${tableId}`);
+                    if (newStatus === "Available") {
+                        container.style.background = "linear-gradient(135deg, #d9f7dc, #b5eabf)";
+                    } else if (newStatus === "Reserved") {
+                        container.style.background = "linear-gradient(135deg, #fbdcdc, #f6a4a4)";
+                    } else {
+                        container.style.background = "linear-gradient(135deg, #fff2d2, #e1c478)";
+                    }
+                } else {
+                    alert("Failed to update table status.");
+                }
+            });
+    }
+
+    function toggleCafeStatus(isClosed) {
+        fetch(`/Dashboard/SetCafeStatus?isClosed=${isClosed}`)
+            .then(response => {
+                if (response.ok) {
+                    document.getElementById("cafeStatusLabel").textContent = isClosed ? "Cafe is Closed" : "Cafe is Open";
+                } else {
+                    alert("Failed to update cafe status.");
+                }
+            });
+    }
+
+    function confirmArrived(timerId) {
+        if (confirm("Mark this reservation as arrived?")) {
+            fetch(`/Dashboard/ConfirmArrival`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ timerId })
+            }).then(res => location.reload());
+        }
+    }
+
+    function cancelReservation(timerId) {
+        if (confirm("Cancel this reservation?")) {
+            fetch(`/Dashboard/CancelArrivalRequest`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ timerId })
+            }).then(res => location.reload());
+        }
+    }
+
+    document.querySelectorAll("[id^='timer-']").forEach(span => {
+        const timerId = span.id.split('-')[1];
+        const endTime = new Date(span.dataset.end);
+        const interval = setInterval(() => {
+            const now = new Date();
+            const diff = endTime - now;
+            if (diff <= 0) {
+                span.textContent = "00:00";
+                clearInterval(interval);
+
+                fetch(`/Dashboard/ExpireTimer?timerId=${timerId}`)
+                    .then(res => {
+                        if (!res.ok) {
+                            console.error("Failed to expire timer on server.");
+                        }
+                    });
+
+                return;
+            }
+            const mins = Math.floor(diff / 60000);
+            const secs = Math.floor((diff % 60000) / 1000);
+            span.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }, 1000);
+    });
+
+    function showModal(id) {
+        const modal = document.getElementById(id);
+        modal.style.display = "block";
+        requestAnimationFrame(() => {
+            modal.classList.add("show");
+            const content = modal.querySelector('.modal-content');
+            content.style.opacity = "1";
+            content.style.transform = "scale(1)";
+        });
+    }
+
+    function hideModal(id) {
+        const modal = document.getElementById(id);
+        const content = modal.querySelector('.modal-content');
+        content.style.opacity = "0";
+        content.style.transform = "scale(0.95)";
+        setTimeout(() => {
+            modal.classList.remove("show");
+            modal.style.display = "none";
+        }, 300);
+    }
+
+</script>
+
+<style>
+    @@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+    .dashboard-sidebar {
+        background: #1a1a1a;
+        color: #fff;
+        min-width: 240px;
+        border-right: 2px solid #333;
+        box-shadow: 4px 0 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .sidebar-title {
+        font-weight: 700;
+        font-size: 1.25rem;
+        color: #c2b280;
+    }
+
+    .sidebar-link {
+        color: #e0e0e0;
+        font-weight: 600;
+        padding: 10px 12px;
+        border-radius: 6px;
+        transition: background 0.2s, color 0.2s;
+    }
+
+        .sidebar-link:hover {
+            background: #2e2e2e;
+            color: #c2b280;
+            text-decoration: none;
+        }
+    
+    html {
+        scroll-behavior: smooth;
+    }
+
+    body {
+        font-family: 'Inter', sans-serif;
+    }
+
+    .dashboard-sidebar {
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        overflow-y: auto;
+        z-index: 1000;
+        background-color: #000;
+    }
+
+    .dashboard-wrapper {
+        background: #f9f9f9;
+        min-height: 100vh;
+    }
+
+    .form-toggle {
+        transform: scale(1.4);
+    }
+
+    .btn-approve,
+    .btn-disapprove {
+        font-weight: bold;
+        padding: 6px 14px;
+        border-radius: 10px;
+        border: none;
+        transition: background 0.3s;
+    }
+
+    .btn-approve {
+        background: #c2b280;
+        color: #000;
+    }
+
+        .btn-approve:hover {
+            background: #b0a06d;
+        }
+
+    .btn-disapprove {
+        background: #555;
+        color: white;
+    }
+
+        .btn-disapprove:hover {
+            background: #999999
+        }
+
+    .screenshot-img {
+        max-height: 100px;
+        transition: transform 0.3s ease;
+    }
+
+        .screenshot-img:hover {
+            transform: scale(1.05);
+        }
+
+    .animate-fade-in {
+        animation: fadeIn 0.5s ease;
+    }
+
+    @@keyframes fadeIn {
+        from
+
+    {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    }
+
+    .circle-timer svg {
+        display: block;
+    }
+
+    .section-header {
+        font-weight: 700;
+        margin-bottom: 20px;
+        font-size: 1.2rem;
+    }
+
+    .expired-card {
+        background: linear-gradient(135deg, #f4f4f4, #e0e0e0);
+        border-left: 5px solid #000;
+        border-radius: 12px;
+        padding: 16px;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        position: relative;
+    }
+
+        .expired-card:hover {
+            transform: scale(1.02);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+        }
+
+    .expired-cross {
+        position: absolute;
+        top: -10px;
+        right: -10px;
+        font-size: 2rem;
+        background-color: #fff;
+        border: 2px solid #aaa;
+        border-radius: 50%;
+        width: 36px;
+        height: 36px;
+        text-align: center;
+        line-height: 32px;
+        font-weight: bold;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        cursor: pointer;
+    }
+
+    .success-card {
+        background: linear-gradient(135deg, #e6f5ea, #c8e6c9);
+        border-left: 5px solid #4caf50;
+    }
+
+    .cancelled-card {
+        background: linear-gradient(135deg, #e0e0e0, #bdbdbd);
+        border-left: 5px solid #757575;
+    }
+
+    .card button {
+        z-index: 1;
+    }
+
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1050;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+    }
+
+        .modal.show {
+            display: block !important;
+        }
+
+    .modal-backdrop {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.4);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        z-index: 0;
+    }
+
+    .modal-content {
+        position: relative;
+        z-index: 1;
+        opacity: 0;
+        transform: scale(0.95);
+        transition: opacity 0.3s ease, transform 0.3s ease;
+        margin: 10% auto;
+        background: white;
+        border-radius: 12px;
+        width: 90%;
+        max-width: 400px;
+        padding: 20px;
+        text-align: center;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+    }
+
+    .table-box select.form-select {
+        font-size: 0.9rem;
+        padding: 6px 10px;
+        height: auto;
+        border-radius: 6px;
+    }
+
+    @@keyframes modalFadeIn {
+        from
+
+    {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    }
+
+    @@keyframes modalFadeOut {
+        from
+
+    {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    to {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+
+    }
+
+    .modal.show {
+        display: block !important;
+        animation: modalFadeIn 0.3s ease-out forwards;
+    }
+
+    .modal.hide {
+        animation: modalFadeOut 0.2s ease-in forwards;
+    }
+
+    .dashboard-sidebar {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .logout-section {
+        margin-top: auto;
+        padding-top: 20px;
+        border-top: 1px solid #333;
+    }
+
+    .dashboard-wrapper {
+        background-image: url('/images/Admin Background.png');
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+        min-height: 100vh;
+    }
+
+        .dashboard-wrapper .overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.3);
+            z-index: 0;
+        }
+
+</style>
+
