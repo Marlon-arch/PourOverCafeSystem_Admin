@@ -5,10 +5,25 @@ const connection = new signalR.HubConnectionBuilder()
     .build();
 
 connection.on("ReceiveUpdate", function (message) {
-    console.log("SignalR message received:", message);
-
     if (message === "RefreshDashboard") {
-        updateDashboardSections();
+        fetch("/Dashboard/Index")
+            .then(response => response.text())
+            .then(html => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, "text/html");
+
+                document.querySelector("#approvals").innerHTML =
+                    doc.querySelector("#approvals").innerHTML;
+
+                document.querySelector("#waitlist-active").innerHTML =
+                    doc.querySelector("#waitlist-active").innerHTML;
+
+                document.querySelector("#waitlist-inactive").innerHTML =
+                    doc.querySelector("#waitlist-inactive").innerHTML;
+
+                document.querySelector("#tables").innerHTML =
+                    doc.querySelector("#tables").innerHTML;
+            });
     }
 });
 

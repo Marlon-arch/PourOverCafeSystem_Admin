@@ -12,9 +12,9 @@ namespace PourOverCafeSystem_Admin
 
             // Add services to the container.
             builder.Services.AddControllersWithViews();
-            
+
             builder.Services.AddSignalR();
-            
+
             builder.Services.AddDbContext<PourOverCoffeeDbContext>(options =>
             {
                 options.UseSqlServer(builder.Configuration.GetConnectionString("PourOverCoffeeDB"));
@@ -24,7 +24,7 @@ namespace PourOverCafeSystem_Admin
             {
                 options.AddPolicy("AllowUserFrontend", policy =>
                 {
-                    policy.WithOrigins("https://localhost:7296")
+                    policy.WithOrigins("http://mjbondoc-001-site1.anytempurl.com/")
                           .AllowAnyHeader()
                           .AllowAnyMethod()
                           .AllowCredentials(); // required for SignalR

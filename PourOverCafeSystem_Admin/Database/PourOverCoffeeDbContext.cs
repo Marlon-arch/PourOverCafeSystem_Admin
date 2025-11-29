@@ -25,9 +25,6 @@ public partial class PourOverCoffeeDbContext : DbContext
 
     public virtual DbSet<User> Users { get; set; }
 
-    public virtual DbSet<CafeStatus> CafeStatuses { get; set; }
-
-
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<CafeTable>(entity =>
@@ -105,12 +102,6 @@ public partial class PourOverCoffeeDbContext : DbContext
             entity.Property(e => e.Password).HasMaxLength(50);
             entity.Property(e => e.Role).HasMaxLength(10);
             entity.Property(e => e.Username).HasMaxLength(50);
-        });
-
-        modelBuilder.Entity<CafeStatus>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.IsClosed).HasDefaultValue(false);
         });
 
         OnModelCreatingPartial(modelBuilder);

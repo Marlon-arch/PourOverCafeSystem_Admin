@@ -24,10 +24,15 @@ namespace PourOverCafeSystem_Admin.Controllers
             public int timerId { get; set; }
         }
 
+        private DateTime GetManilaTime()
+        {
+            return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Manila"));
+        }
+
         [HttpGet]
         public async Task<IActionResult> Index()
         {
-            var now = DateTime.Now;
+            var now = GetManilaTime();
 
             // Automatically expire overdue reservations
             var expiredTimers = await _context.Timers
@@ -51,13 +56,14 @@ namespace PourOverCafeSystem_Admin.Controllers
                         payment.PaymentStatus = "Cancelled";
                 }
             }
-            
+
             await _context.SaveChangesAsync();
 
             if (expiredTimers.Any())
             {
                 await _hubContext.Clients.All.SendAsync("ReceiveUpdate", "RefreshDashboard");
                 await _hubContext.Clients.All.SendAsync("WaitlistUpdated");
+                await _hubContext.Clients.All.SendAsync("TableStatusUpdated");
             }
 
             var model = new DashboardViewModel
@@ -93,11 +99,6 @@ namespace PourOverCafeSystem_Admin.Controllers
                     .ToListAsync(),
 
                 Tables = await _context.CafeTables.ToListAsync(),
-
-                CafeIsClosed = await _context.CafeStatuses
-                    .Where(cs => cs.Id == 1)
-                    .Select(cs => cs.IsClosed)
-                    .FirstOrDefaultAsync()
             };
 
             return View(model);
@@ -185,6 +186,8 @@ namespace PourOverCafeSystem_Admin.Controllers
 
                 await _hubContext.Clients.All.SendAsync("WaitlistUpdated");
 
+                await _hubContext.Clients.All.SendAsync("TableStatusUpdated");
+
                 return Ok();
             }
 
@@ -194,7 +197,7 @@ namespace PourOverCafeSystem_Admin.Controllers
         [HttpPost]
         public async Task<IActionResult> RemoveAllInactive()
         {
-            var now = DateTime.Now;
+            var now = GetManilaTime();
 
             var timers = await _context.Timers
                 .Include(t => t.Reservation)
@@ -228,25 +231,10 @@ namespace PourOverCafeSystem_Admin.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> SetCafeStatus(bool isClosed)
-        {
-            var status = await _context.CafeStatuses.FirstOrDefaultAsync(cs => cs.Id == 1);
-            if (status != null)
-            {
-                status.IsClosed = isClosed;
-                await _context.SaveChangesAsync();
-
-                await _hubContext.Clients.All.SendAsync("CafeStatusUpdated", isClosed);
-            }
-
-            return Ok();
-        }
-
-        [HttpGet]
         public async Task<IActionResult> Summary(DateTime? from, DateTime? to, string? search)
         {
             var start = from ?? DateTime.Today;
-            var end = to?.AddDays(1).AddTicks(-1) ?? DateTime.Now;
+            var end = to?.AddDays(1).AddTicks(-1) ?? GetManilaTime();
 
             var query = _context.Reservations
                 .Include(r => r.Table)
@@ -275,18 +263,6 @@ namespace PourOverCafeSystem_Admin.Controllers
         {
             await _hubContext.Clients.All.SendAsync("ReceiveUpdate", "RefreshDashboard");
             return Ok("SignalR message sent from Admin");
-        }
-
-        [HttpGet]
-        [Route("api/cafe-status")]
-        public async Task<IActionResult> GetCafeStatus()
-        {
-            var isClosed = await _context.CafeStatuses
-                .Where(cs => cs.Id == 1)
-                .Select(cs => cs.IsClosed)
-                .FirstOrDefaultAsync();
-
-            return Json(new { isClosed });
         }
 
     }

@@ -11,33 +11,21 @@
             <img src="/images/Navbar Logo.png" alt="Pour Over Admin" class="img-fluid" style="max-width: 180px; height: auto;" />
         </div>
 
-        <!-- Cafe Status Switch -->
-        <div class="cafe-status-toggle mb-4 text-center">
-            <label class="form-check-label fw-bold d-block mb-2" id="cafeStatusLabel" for="cafeClosedSwitch">
-                @(Model.CafeIsClosed ? "Cafe is Closed" : "Cafe is Open")
-            </label>
-            <div class="form-check form-switch d-flex justify-content-center">
-                <input class="form-check-input form-toggle" type="checkbox" id="cafeClosedSwitch"
-                       onchange="toggleCafeStatus(this.checked)"
-                @(Model.CafeIsClosed ? "checked" : "") />
-            </div>
-        </div>
-
-        <ul class="nav flex-column">
+        <ul class="nav flex-column text-center">
             <li class="nav-item mb-2">
-                <a class="nav-link sidebar-link" asp-controller="Dashboard" asp-action="Summary">📊 Summary Reports</a>
+                <a class="nav-link sidebar-link" asp-controller="Dashboard" asp-action="Summary">Summary Reports</a>
             </li>
             <li class="nav-item mb-2">
-                <a class="nav-link sidebar-link" href="#approvals">📝 Approval</a>
+                <a class="nav-link sidebar-link" href="#approvals">Approval</a>
             </li>
             <li class="nav-item mb-2">
-                <a class="nav-link sidebar-link" href="#waitlist-active">⏳ Active Waitlist</a>
+                <a class="nav-link sidebar-link" href="#waitlist-active">Active Waitlist</a>
             </li>
             <li class="nav-item mb-2">
-                <a class="nav-link sidebar-link" href="#waitlist-inactive">🛑 Inactive Waitlist</a>
+                <a class="nav-link sidebar-link" href="#waitlist-inactive">Inactive Waitlist</a>
             </li>
             <li class="nav-item mb-2">
-                <a class="nav-link sidebar-link" href="#tables">📋 Management</a>
+                <a class="nav-link sidebar-link" href="#tables">Management</a>
             </li>
         </ul>
 
@@ -49,13 +37,10 @@
     </aside>
 
     <main class="dashboard-main p-4 flex-fill">
-        <div class="text-center mb-4">
-            <img src="/images/Admin Header.png" alt="Admin Dashboard" class="img-fluid" style="max-width: 850px; height: auto;" />
-        </div>
 
         <!-- Pending Approvals Section -->
         <section id="approvals" class="dashboard-section mb-5">
-            <h4 class="section-header">📝 Payment Approvals</h4>
+            <h4 class="section-header">Payment Approvals</h4>
             <div class="row">
                 @foreach (var payment in Model.Approvals)
                 {
@@ -72,7 +57,7 @@
                                 </div>
                                 <div class="ms-3" style="flex: 0 0 120px">
                                     <a href="@payment.ScreenshotPath" target="_blank">
-                                        <img src="@payment.ScreenshotPath" class="img-fluid rounded shadow-sm screenshot-img" />
+                                        <img src="@payment.ScreenshotPath" class="img-fluid rounded shadow-sm screenshot-img" style="width: 100%; max-width: 80px;" />
                                     </a>
                                 </div>
                             </div>
@@ -118,7 +103,7 @@
 
         <!-- Waitlist Active Section -->
         <section id="waitlist-active" class="mb-5">
-            <h4 class="section-header">⏳ Active Waitlist</h4>
+            <h4 class="section-header">Active Waitlist</h4>
             <div class="row">
                 @foreach (var timer in Model.WaitlistActive)
                 {
@@ -182,7 +167,7 @@
         <!-- Waitlist Inactive Section -->
         <section id="waitlist-inactive" class="mb-5">
             <h4 class="section-header">
-                🛑 Inactive Waitlist
+                Inactive Waitlist
                 <button class="btn btn-sm btn-outline-danger float-end" onclick="showModal('removeAllModal')">Remove All</button>
             </h4>
             <div class="row" id="inactiveCards">
@@ -236,22 +221,25 @@
 
         <!-- Table Monitor Section -->
         <section id="tables" class="mb-5">
-            <h4 class="section-header">🪑 Table Layout Reference</h4>
+            <h4 class="section-header">Table Layout Reference</h4>
             <div class="text-center mb-4">
                 <img src="/images/PourOverFloorPlan.png" alt="Cafe Floorplan Layout" class="img-fluid rounded shadow" style="max-height: 600px;">
             </div>
 
-            <h4 class="section-header">📋 Table Management</h4>
+            <h4 class="section-header">Table Management</h4>
             <div class="row">
                 @foreach (var table in Model.Tables)
                 {
                     <div class="col-md-2 col-6 mb-3">
-                        <div id="table-box-@table.TableId" class="table-box p-3 text-center rounded shadow-sm animate-fade-in" style="background: @(table.Status == "Available" ? "linear-gradient(135deg, #d9f7dc, #b5eabf)" : table.Status == "Reserved" ? "linear-gradient(135deg, #fbdcdc, #f6a4a4)" : "linear-gradient(135deg, #fff2d2, #e1c478)")">
+                        <div id="table-box-@table.TableId" class="table-box p-3 text-center rounded shadow-sm animate-fade-in"
+                             style="background: @(table.Status == "Available" ? "linear-gradient(135deg, #d9f7dc, #b5eabf)" :
+                                                 table.Status == "Reserved" ? "linear-gradient(135deg, #fbdcdc, #f6a4a4)" :
+                                                 "linear-gradient(135deg, #fff2d2, #e1c478)")">
                             <h5 class="fw-bold">@table.TableName</h5>
                             <select class="form-select mt-2" onchange="updateTableStatus(@table.TableId, this.value)">
-                                <option selected="@(table.Status == "Available")" value="Available">Available</option>
-                                <option selected="@(table.Status == "Reserved")" value="Reserved">Reserved</option>
-                                <option selected="@(table.Status == "Unavailable")" value="Unavailable">Unavailable</option>
+                                @Html.Raw($"<option value='Available' {(table.Status == "Available" ? "selected" : "")}>Available</option>")
+                                @Html.Raw($"<option value='Reserved' {(table.Status == "Reserved" ? "selected" : "")}>Reserved</option>")
+                                @Html.Raw($"<option value='Unavailable' {(table.Status == "Unavailable" ? "selected" : "")}>Unavailable</option>")
                             </select>
                         </div>
                     </div>
@@ -317,6 +305,7 @@
         fetch(`/Dashboard/UpdateTableStatus?tableId=${tableId}&status=${newStatus}`)
             .then(res => {
                 if (res.ok) {
+                    // Visual update on admin side
                     const container = document.getElementById(`table-box-${tableId}`);
                     if (newStatus === "Available") {
                         container.style.background = "linear-gradient(135deg, #d9f7dc, #b5eabf)";
@@ -325,20 +314,15 @@
                     } else {
                         container.style.background = "linear-gradient(135deg, #fff2d2, #e1c478)";
                     }
+
+                    console.log("Status updated and SignalR broadcast sent.");
                 } else {
                     alert("Failed to update table status.");
                 }
-            });
-    }
-
-    function toggleCafeStatus(isClosed) {
-        fetch(`/Dashboard/SetCafeStatus?isClosed=${isClosed}`)
-            .then(response => {
-                if (response.ok) {
-                    document.getElementById("cafeStatusLabel").textContent = isClosed ? "Cafe is Closed" : "Cafe is Open";
-                } else {
-                    alert("Failed to update cafe status.");
-                }
+            })
+            .catch(err => {
+                console.error("Fetch error:", err);
+                alert("Error updating table status.");
             });
     }
 
@@ -409,6 +393,37 @@
         }, 300);
     }
 
+    function applyInactiveCardHiding() {
+        const cards = document.querySelectorAll(".inactive-card");
+        cards.forEach(card => {
+            const id = card.getAttribute("data-id");
+            if (localStorage.getItem("removedCard_" + id) === "true") {
+                card.style.display = "none";
+            }
+        });
+    }
+
+    window.onload = applyInactiveCardHiding;
+
+    connection.on("ReceiveUpdate", function (message) {
+        fetch("/Dashboard/Index")
+            .then(res => res.text())
+            .then(html => {
+                const parser = new DOMParser();
+                const newDoc = parser.parseFromString(html, "text/html");
+
+                const newApprovals = newDoc.querySelector("#approvals");
+                const newWaitlistActive = newDoc.querySelector("#waitlist-active");
+                const newWaitlistInactive = newDoc.querySelector("#waitlist-inactive");
+
+                document.querySelector("#approvals").innerHTML = newApprovals.innerHTML;
+                document.querySelector("#waitlist-active").innerHTML = newWaitlistActive.innerHTML;
+                document.querySelector("#waitlist-inactive").innerHTML = newWaitlistInactive.innerHTML;
+
+                applyInactiveCardHiding();
+            });
+        });
+
 </script>
 
 <style>
@@ -430,8 +445,9 @@
 
     .sidebar-link {
         color: #e0e0e0;
+        font-size: 1.6rem;
         font-weight: 600;
-        padding: 10px 12px;
+        padding: 30px 15px;
         border-radius: 6px;
         transition: background 0.2s, color 0.2s;
     }
@@ -441,7 +457,7 @@
             color: #c2b280;
             text-decoration: none;
         }
-    
+
     html {
         scroll-behavior: smooth;
     }
@@ -496,7 +512,7 @@
         }
 
     .screenshot-img {
-        max-height: 100px;
+        max-height: 300px;
         transition: transform 0.3s ease;
     }
 
@@ -509,18 +525,15 @@
     }
 
     @@keyframes fadeIn {
-        from
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
 
-    {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
 
     .circle-timer svg {
@@ -528,9 +541,14 @@
     }
 
     .section-header {
-        font-weight: 700;
+        font-weight: 200;
+        font-size: 2.2rem;
         margin-bottom: 20px;
-        font-size: 1.2rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #111;
+        border-bottom: 2px solid #ccc;
+        padding-bottom: 8px;
     }
 
     .expired-card {
@@ -629,33 +647,27 @@
     }
 
     @@keyframes modalFadeIn {
-        from
+        from {
+            opacity: 0;
+            transform: scale(0.95);
+        }
 
-    {
-        opacity: 0;
-        transform: scale(0.95);
-    }
-
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
-
+        to {
+            opacity: 1;
+            transform: scale(1);
+        }
     }
 
     @@keyframes modalFadeOut {
-        from
+        from {
+            opacity: 1;
+            transform: scale(1);
+        }
 
-    {
-        opacity: 1;
-        transform: scale(1);
-    }
-
-    to {
-        opacity: 0;
-        transform: scale(0.95);
-    }
-
+        to {
+            opacity: 0;
+            transform: scale(0.95);
+        }
     }
 
     .modal.show {

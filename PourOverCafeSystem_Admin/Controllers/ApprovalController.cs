@@ -38,6 +38,8 @@ namespace PourOverCafeSystem_Admin.Controllers
                 .Include(p => p.Reservation)
                 .FirstOrDefaultAsync(p => p.PaymentId == id);
 
+            var manilaTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Manila"));
+
             if (payment != null && payment.Reservation != null)
             {
                 payment.PaymentStatus = "Approved";
@@ -46,8 +48,8 @@ namespace PourOverCafeSystem_Admin.Controllers
                 var timer = new PourOverCafeSystem_Admin.Database.Timer
                 {
                     ReservationId = payment.ReservationId,
-                    StartTime = DateTime.Now,
-                    EndTime = DateTime.Now.AddMinutes(10),
+                    StartTime = manilaTime,
+                    EndTime = manilaTime.AddSeconds(10),
                     Arrived = null
                 };
 
